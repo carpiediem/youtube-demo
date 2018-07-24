@@ -7,7 +7,6 @@ For more information about Affectiva's JavaScript SDK, visit http://developer.af
 ## Try it Now!
 
 Click [here](https://affectiva.github.io/youtube-demo) to try the demo.
-
 ## Running the Demo Locally:
 
 ### Requirements:

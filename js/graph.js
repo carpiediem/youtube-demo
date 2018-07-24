@@ -1,6 +1,13 @@
+// https://github.com/wbkd/d3-extended
+d3.selection.prototype.moveToFront = function() {
+  return this.each(function(){
+    this.parentNode.appendChild(this);
+  });
+};
+
 /** Graph Controller
  *  This is an Object that performs the state changes and interfaces with the relevant libraries in order to graph data that is coming to the graph from the detector.
- * @param {string} id - id of the svg curve div object in the DOM 
+ * @param {string} id - id of the svg curve div object in the DOM
  * @returns {object} - object that represents the graph controller.
  */
 function Graph (id) {
@@ -11,10 +18,9 @@ function Graph (id) {
   const curveBox = d3.select(id);
   let cursor = null;
   let cursor_text = null;
-  const colors = ["#FFFFFF", "orangered", "deeppink", "yellow", "green"];
-  const selected_emotion_border_properties = "3px solid #ffcc66";
+  const colors = ["#2ee65d", "#fc4627", "#ffd000", "#2bb3f7", "#ff69bf"];
   let selected_emotion = "all";
-  const svg_width = 720;
+  let svg_width = 720;
   let x_scale = d3.scaleLinear().domain([0, 0]).range([0, svg_width]);
   let y_scale = d3.scaleLinear().domain([100, 0]).range([2, 248]);
   let time_scale = null;
@@ -33,7 +39,6 @@ function Graph (id) {
   let last_box = null;
   // public members
   this.emotions = ["joy", "anger", "disgust", "contempt", "surprise"];
-  
   //private methods
 
   /** Creates a string that represents the current time of the video.
@@ -71,8 +76,8 @@ function Graph (id) {
   this.resetSelectedEmotionButton = (emotion) => {
     // If the selected_emotion is not the one that was just clicked, then toggle the current one
     if (selected_emotion !== emotion) {
-      $("#" + selected_emotion).css("border", "");
-      $("#" + emotion).css("border", selected_emotion_border_properties);
+      $("#" + selected_emotion).removeClass("selected");
+      $("#" + emotion).addClass("selected");
       selected_emotion = emotion;
     }
 
@@ -143,7 +148,6 @@ function Graph (id) {
    * @param {string:float} emotionTable - this is a dictionary that maps each emotion to a floating point number
    * @param {float} timestamp - this is the timestamp in the video (effectively the x coordinate). */
   this.updatePlot = (emotionTable, timestamp) => {
-    
     if (wasNil) {
       var initial_data = [
         [ [timestamp, emotionTable["joy"]] ], // joy
@@ -152,7 +156,6 @@ function Graph (id) {
         [ [timestamp, emotionTable["contempt"]] ], // contempt
         [ [timestamp, emotionTable["surprise"]] ]  // surprise
       ];
-  
       self
         .getCurves()
         .filter(".c"+currentCurvesIdx.toString())
@@ -170,7 +173,7 @@ function Graph (id) {
       // Now add the graybox to the SVG
       gray_boxes[currentCurvesIdx].push(x_scale(timestamp));
       plotLastVoid(timestamp);
-
+      last_box.moveToFront();
       wasNil = false;
     } else {
       self
@@ -180,13 +183,13 @@ function Graph (id) {
         .data(processed_frames[currentCurvesIdx])   // curves are assigned in index order, this is how d3 works.
         .attr("d", path);
 
-    }    
+    }
     return self;
   };
-  
+
   var initLastVoid = () => {
     last_box
-      .attr("x", gray_boxes[currentCurvesIdx][0] - 2)
+      .attr("x", gray_boxes[currentCurvesIdx][0])
       .attr("y", 0)
       .attr("width", 0)
       .attr("height", 250)
@@ -195,7 +198,7 @@ function Graph (id) {
   var plotLastVoid = (timestamp) => {
     let x1 = gray_boxes[currentCurvesIdx][0];
     let x2 = x_scale(timestamp);
-    last_box.attr("width", x2-x1 + 6);
+    last_box.attr("width", x2-x1);
   };
 
   /** Instantiate the plot. zero the data, and set attributes of curves. */
@@ -221,6 +224,9 @@ function Graph (id) {
       .attr("fill", "transparent")
       .attr("stroke-width","2px")
       .attr("stroke-opacity", "1");
+
+
+    svg_width = $(id).width();
 
     return self;
   };
@@ -292,7 +298,6 @@ function Graph (id) {
     $(".draggable-rect, line.cursor-wide").css("cursor", "pointer");
     return self;
   };
-  
   /** Initializes the cursor and returns it.
    * @returns {object} - cursor that can then configure callbacks on. */
   this.initializeCursor = () => {
