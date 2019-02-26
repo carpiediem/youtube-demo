@@ -1,0 +1,119 @@
+<html>
+  <head>
+    <title>Affectiva JavaScript SDK MR Demo (Using Frames)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      body {
+        background-color: rgb(235, 0, 139);
+        padding: 5em;
+        font-family: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+          "Segoe UI Emoji", "Segoe UI Symbol";
+      }
+
+      span.code {
+        font-family: monospace;
+        font-weight: bold;
+      }
+
+      pre {
+        background-color: #ddd;
+        padding: 1em;
+      }
+
+      iframe {
+        width: 100%;
+        height: 500px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <p>
+      If you need to run the Affectiva SDK within an iframe or frameset, like
+      the one below, the
+      <span class="code"
+        ><a
+          href="https://knowledge.affectiva.com/docs/analyze-the-camera-stream-3"
+          target="_blank"
+          >affdex.CameraDetector</a
+        ></span
+      >
+      factory will throw an
+      <span class="code">onWebcamConnectFailure</span> event. This is because
+      the SDK is downloaded from a different domain from your webpage
+      (download.affectiva.com). When it attempts to execute
+      <span class="code">navigator.mediaDevices.getUserMedia()</span>, modern
+      browsers will stop it, as a security precaution.
+    </p>
+    <p>
+      The best solution, in this case, is to use the
+      <span class="code"
+        ><a
+          href="https://knowledge.affectiva.com/docs/analyze-the-camera-stream-3"
+          target="_blank"
+          >affdex.FrameDetector</a
+        ></span
+      >
+      factory instead and access
+      <span class="code">navigator.mediaDevices</span> with your own code.
+    </p>
+    <pre>
+      var startedAt = Date.now();
+      var video = document.querySelector('video');
+      var canvas = document.querySelector('canvas');
+      var context = canvas.getContext('2d');
+
+      var faceMode = affdex.FaceDetectorMode.LARGE_FACES;
+      var detector = new affdex.FrameDetector(faceMode);
+
+      function onWebcamFound(stream) {
+        var streamMetadata = stream.getVideoTracks()[0].getSettings();
+
+        // Resize the canvas element to match webcam resolution
+        canvas.width = this.width;
+        canvas.height = this.height;
+
+        // Display the webcam stream in the video element
+        video.srcObject = stream;
+        video.load();
+        video.onplay = detector.start;
+      }
+
+      function getFrame() {
+        // Copy image from the video element to the canvas element
+        context.drawImage(video, 0, 0);
+
+        // Read image from the canvas element to a Buffer
+        var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        var timeSinceStart = (Date.now() - startedAt) / 1000;
+
+        // Have the Affectiva SDK process this frame
+        detector.process(imageData, timeSinceStart);
+      }
+
+      function handleResults(faces, image, timestamp) {
+        // Use the data in your app
+        updateChart(faces, timestamp);
+
+        // Repeat for the next frame
+        getFrame();
+      }
+
+      // Access the webcam (from the same domain as the webpage)
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(onWebcamFound)
+        .catch(() => {
+          console.error('Browser blocked webcam access');
+        });
+
+      // Add event listeners
+      detector.addEventListener('onInitializeSuccess', getFrame);
+      detector.addEventListener('onImageResultsSuccess', handleResults);
+    </pre>
+    <iframe src="nested-example-iframe.html"></iframe>
+  </body>
+</html>
